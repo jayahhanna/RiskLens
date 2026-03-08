@@ -6,12 +6,15 @@
   <title>RiskLens | Portfolio Risk Analyzer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="app-header">
-    <div class="brand">RiskLens</div>
+    <div class="brand-wrap">
+      <div class="brand">RiskLens</div>
+      <div class="brand-sub">Institutional Portfolio Risk Intelligence</div>
+    </div>
     <div class="product-label">Portfolio Risk Analyzer</div>
   </header>
 
@@ -83,23 +86,38 @@
 
       <section class="metrics-grid">
         <article class="metric-card">
-          <span class="metric-label">Portfolio Value</span>
+          <div class="metric-head">
+            <span class="metric-label">Portfolio Value</span>
+            <span class="info-dot" tabindex="0" data-tooltip="Total current market value of all holdings based on latest close prices.">i</span>
+          </div>
           <p id="portfolioValue" class="metric-value">$0.00</p>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Annualized Volatility</span>
+          <div class="metric-head">
+            <span class="metric-label">Annualized Volatility</span>
+            <span class="info-dot" tabindex="0" data-tooltip="Estimated yearly variability of portfolio returns from historical daily moves.">i</span>
+          </div>
           <p id="portfolioVolatility" class="metric-value">0.00%</p>
         </article>
         <article class="metric-card">
-          <span class="metric-label">1-Day VaR (95%)</span>
+          <div class="metric-head">
+            <span class="metric-label">1-Day VaR (95%)</span>
+            <span class="info-dot" tabindex="0" data-tooltip="Estimated one-day loss threshold at 95% confidence under normal market conditions.">i</span>
+          </div>
           <p id="portfolioVar" class="metric-value">$0.00 (0.00%)</p>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Concentration Risk</span>
+          <div class="metric-head">
+            <span class="metric-label">Concentration Risk</span>
+            <span class="info-dot" tabindex="0" data-tooltip="Exposure to the largest holding. Higher concentration means weaker diversification.">i</span>
+          </div>
           <p id="concentrationRisk" class="metric-value">0.00% (Low)</p>
         </article>
         <article class="metric-card metric-card-wide">
-          <span class="metric-label">Risk Score</span>
+          <div class="metric-head">
+            <span class="metric-label">Risk Score</span>
+            <span class="info-dot" tabindex="0" data-tooltip="Composite score (0-100) combining volatility, VaR, and concentration risk.">i</span>
+          </div>
           <p id="riskScore" class="metric-value">0 / 100 (Low)</p>
         </article>
       </section>
@@ -122,19 +140,31 @@
         <h3>Metric Guide</h3>
         <div class="guide-grid">
           <div>
-            <h4>Volatility</h4>
+            <div class="guide-title">
+              <h4>Volatility</h4>
+              <span class="info-dot" tabindex="0" data-tooltip="Tracks how strongly returns fluctuate over time.">i</span>
+            </div>
             <p>Shows how widely returns fluctuate. Higher volatility means larger portfolio swings.</p>
           </div>
           <div>
-            <h4>Value at Risk (VaR)</h4>
+            <div class="guide-title">
+              <h4>Value at Risk (VaR)</h4>
+              <span class="info-dot" tabindex="0" data-tooltip="A statistical estimate of potential one-day downside.">i</span>
+            </div>
             <p>Estimates a one-day potential loss threshold at 95% confidence under normal conditions.</p>
           </div>
           <div>
-            <h4>Concentration Risk</h4>
+            <div class="guide-title">
+              <h4>Concentration Risk</h4>
+              <span class="info-dot" tabindex="0" data-tooltip="Indicates how dependent the portfolio is on its biggest position.">i</span>
+            </div>
             <p>Measures dependence on the largest position. Higher concentration means less diversification.</p>
           </div>
           <div>
-            <h4>Risk Score</h4>
+            <div class="guide-title">
+              <h4>Risk Score</h4>
+              <span class="info-dot" tabindex="0" data-tooltip="Aggregated risk indicator to compare portfolio risk quickly.">i</span>
+            </div>
             <p>Combines volatility, VaR, and concentration into a single 0-100 risk indicator.</p>
           </div>
         </div>
