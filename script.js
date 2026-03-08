@@ -2,6 +2,8 @@
 
 const STORAGE_KEY = "risklens_holdings_v1";
 const WINDOW_STORAGE_KEY = "risklens_analysis_window_v1";
+const PRICE_CACHE_PREFIX = "risklens_price_cache_";
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 const assets = [];
 let allocationChart = null;
@@ -25,6 +27,8 @@ const concentrationRiskEl = document.getElementById("concentrationRisk");
 const riskScoreEl = document.getElementById("riskScore");
 const riskInterpretationEl = document.getElementById("riskInterpretation");
 const messageBox = document.getElementById("messageBox");
+const riskGaugeMarker = document.getElementById("riskGaugeMarker");
+const riskGaugeValue = document.getElementById("riskGaugeValue");
 
 assetForm.addEventListener("submit", function (event) {
   event.preventDefault();
@@ -71,6 +75,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadWindowFromStorage();
   loadHoldingsFromStorage();
   renderHoldingsTable();
+  updateRiskGauge(0);
 });
 
 function renderHoldingsTable() {
@@ -247,16 +252,38 @@ function getWindowDays(windowValue) {
 }
 
 async function fetchTickerData(ticker) {
+  const cachedData = readPriceCache(ticker);
+  const hasCachedPrices = cachedData && Array.isArray(cachedData.closes) && cachedData.closes.length > 1;
+
+  // Cache logic: use local data if it is fresh (<=12 hours) to reduce API calls.
+  if (hasCachedPrices && isCacheFresh(cachedData.fetchedAt)) {
+    console.log(`Using fresh cached prices for ${ticker}`);
+    return { ok: true, closes: cachedData.closes };
+  }
+
   const endpoint = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(
     ticker
   )}&interval=1day&outputsize=300&apikey=${API_KEY}`;
 
-  const response = await fetch(endpoint);
+  let response;
+  try {
+    response = await fetch(endpoint);
+  } catch (error) {
+    if (hasCachedPrices) {
+      console.warn(`API request failed for ${ticker}; using cached prices instead.`, error);
+      return { ok: true, closes: cachedData.closes };
+    }
+    return { ok: false, error: "historical data unavailable." };
+  }
 
   let data = null;
   try {
     data = await response.json();
   } catch (error) {
+    if (hasCachedPrices) {
+      console.warn(`Response parse failed for ${ticker}; using cached prices instead.`, error);
+      return { ok: true, closes: cachedData.closes };
+    }
     console.log("Twelve Data raw response parse error:", { ticker, error });
     return { ok: false, error: "historical data unavailable." };
   }
@@ -280,9 +307,15 @@ async function fetchTickerData(ticker) {
       .filter((value) => Number.isFinite(value));
 
     if (closes.length === 0) {
+      if (hasCachedPrices) {
+        console.warn(`Received empty closes for ${ticker}; using cached prices instead.`);
+        return { ok: true, closes: cachedData.closes };
+      }
       return { ok: false, error: "historical data unavailable." };
     }
 
+    // Cache logic: save successful API results for reuse in future runs.
+    writePriceCache(ticker, closes);
     return { ok: true, closes };
   }
 
@@ -294,6 +327,10 @@ async function fetchTickerData(ticker) {
     apiMessage.includes("too many requests");
 
   if (isRateLimit) {
+    if (hasCachedPrices) {
+      console.warn(`Rate limit for ${ticker}; using cached prices instead.`);
+      return { ok: true, closes: cachedData.closes };
+    }
     return { ok: false, error: "rate limit reached by Twelve Data. Please wait and try again." };
   }
 
@@ -305,15 +342,32 @@ async function fetchTickerData(ticker) {
       apiMessage.includes("unknown"));
 
   if (isInvalidTicker) {
+    if (hasCachedPrices) {
+      console.warn(`Ticker ${ticker} returned invalid from API; using cached prices instead.`);
+      return { ok: true, closes: cachedData.closes };
+    }
     return { ok: false, error: "invalid ticker or symbol not found." };
   }
 
   if (isMissingResponse) {
+    if (hasCachedPrices) {
+      console.warn(`Missing API response for ${ticker}; using cached prices instead.`);
+      return { ok: true, closes: cachedData.closes };
+    }
     return { ok: false, error: "historical data unavailable." };
   }
 
   if (apiStatus === "error") {
+    if (hasCachedPrices) {
+      console.warn(`API error for ${ticker}; using cached prices instead.`, data.message);
+      return { ok: true, closes: cachedData.closes };
+    }
     return { ok: false, error: data.message || "historical data unavailable." };
+  }
+
+  if (hasCachedPrices) {
+    console.warn(`Unknown API response for ${ticker}; using cached prices instead.`);
+    return { ok: true, closes: cachedData.closes };
   }
 
   return { ok: false, error: "historical data unavailable." };
@@ -444,6 +498,7 @@ function updateSummaryCards(results) {
   concentrationRiskEl.textContent = `${formatNumber(results.maxAllocation, 2)}% (${results.concentrationLevel})`;
 
   riskScoreEl.textContent = `${formatNumber(results.riskScore, 1)} / 100 (${results.riskScoreLevel})`;
+  updateRiskGauge(results.riskScore);
 }
 
 function updateAllocationChart(allocations) {
@@ -531,6 +586,7 @@ function resetOutput() {
   riskScoreEl.textContent = "0 / 100 (Low)";
   riskInterpretationEl.textContent =
     "Add holdings and run analysis to generate a plain-English portfolio risk summary.";
+  updateRiskGauge(0);
 
   if (allocationChart) {
     allocationChart.destroy();
@@ -561,6 +617,55 @@ function formatNumber(value, decimals) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+// Gauge rendering: map score (0-100) to marker position along the horizontal gauge.
+function updateRiskGauge(score) {
+  if (!riskGaugeMarker || !riskGaugeValue) return;
+
+  const clampedScore = clamp(score, 0, 100);
+  riskGaugeMarker.style.left = `${clampedScore}%`;
+  riskGaugeValue.textContent = formatNumber(clampedScore, 1);
+}
+
+function getPriceCacheKey(ticker) {
+  return `${PRICE_CACHE_PREFIX}${ticker.toUpperCase()}`;
+}
+
+// Read cached ticker history from localStorage.
+function readPriceCache(ticker) {
+  const raw = localStorage.getItem(getPriceCacheKey(ticker));
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.ticker === "string" &&
+      Array.isArray(parsed.closes) &&
+      Number.isFinite(parsed.fetchedAt)
+    ) {
+      return parsed;
+    }
+  } catch (error) {
+    console.error(`Failed to parse cache for ${ticker}:`, error);
+  }
+
+  return null;
+}
+
+// Store successfully fetched ticker history in localStorage.
+function writePriceCache(ticker, closes) {
+  const payload = {
+    ticker: ticker.toUpperCase(),
+    closes,
+    fetchedAt: Date.now(),
+  };
+  localStorage.setItem(getPriceCacheKey(ticker), JSON.stringify(payload));
+}
+
+function isCacheFresh(fetchedAt) {
+  return Date.now() - fetchedAt <= CACHE_TTL_MS;
 }
 
 // Save holdings so user entries persist after refresh/reopen.

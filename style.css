@@ -351,6 +351,75 @@ tbody tr:hover {
   color: #f1f5fb;
 }
 
+.risk-gauge {
+  margin-top: 12px;
+}
+
+.risk-gauge-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  overflow: visible;
+  border: 1px solid #24374d;
+  background: linear-gradient(
+    90deg,
+    #2a9d57 0%,
+    #2a9d57 30%,
+    #b89e35 30%,
+    #b89e35 60%,
+    #c67f2f 60%,
+    #c67f2f 80%,
+    #b24848 80%,
+    #b24848 100%
+  );
+}
+
+.risk-gauge-marker {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 2px;
+  height: 18px;
+  background: #e6eefb;
+  transform: translate(-50%, -50%);
+}
+
+.risk-gauge-marker span {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  color: #e7eefb;
+  background: #0f1a29;
+  border: 1px solid #30465e;
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.risk-gauge-scale {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  font-size: 0.68rem;
+  color: #9db1ca;
+}
+
+.risk-gauge-scale span:nth-child(1) {
+  text-align: left;
+}
+
+.risk-gauge-scale span:nth-child(2),
+.risk-gauge-scale span:nth-child(3) {
+  text-align: center;
+}
+
+.risk-gauge-scale span:nth-child(4) {
+  text-align: right;
+}
+
 .content-card {
   border: 1px solid var(--border-soft);
   border-radius: 7px;
