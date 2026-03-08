@@ -1,5 +1,8 @@
 ﻿const API_KEY = "f0ee3a7ca4bf4e868a01bbd36f65f173";
 
+const STORAGE_KEY = "risklens_holdings_v1";
+const WINDOW_STORAGE_KEY = "risklens_analysis_window_v1";
+
 const assets = [];
 let allocationChart = null;
 let editingAssetIndex = null;
@@ -54,13 +57,21 @@ assetForm.addEventListener("submit", function (event) {
     addAssetBtn.textContent = "Add Asset";
   }
 
+  saveHoldingsToStorage();
   renderHoldingsTable();
 
   assetForm.reset();
-  colorInput.value = "#0a84ff";
+  colorInput.value = "#2d74ff";
 });
 
 runAnalysisBtn.addEventListener("click", runRiskAnalysis);
+windowSelect.addEventListener("change", saveWindowToStorage);
+
+document.addEventListener("DOMContentLoaded", function () {
+  loadWindowFromStorage();
+  loadHoldingsFromStorage();
+  renderHoldingsTable();
+});
 
 function renderHoldingsTable() {
   holdingsBody.innerHTML = "";
@@ -89,16 +100,15 @@ function renderHoldingsTable() {
     const actionCell = document.createElement("td");
 
     const editButton = document.createElement("button");
-    editButton.className = "remove-btn";
+    editButton.className = "action-btn";
     editButton.textContent = "Edit";
     editButton.type = "button";
-    editButton.style.marginRight = "6px";
     editButton.addEventListener("click", function () {
       startEditingAsset(index);
     });
 
     const removeButton = document.createElement("button");
-    removeButton.className = "remove-btn";
+    removeButton.className = "action-btn danger";
     removeButton.textContent = "Remove";
     removeButton.type = "button";
     removeButton.addEventListener("click", function () {
@@ -137,13 +147,14 @@ function removeAsset(index) {
       editingAssetIndex = null;
       addAssetBtn.textContent = "Add Asset";
       assetForm.reset();
-      colorInput.value = "#0a84ff";
+      colorInput.value = "#2d74ff";
     } else if (editingAssetIndex > index) {
       editingAssetIndex -= 1;
     }
   }
 
   assets.splice(index, 1);
+  saveHoldingsToStorage();
   renderHoldingsTable();
 }
 
@@ -250,7 +261,6 @@ async function fetchTickerData(ticker) {
     return { ok: false, error: "historical data unavailable." };
   }
 
-  // Keep raw response logging for direct inspection in browser dev tools.
   console.log("Twelve Data raw response:", { ticker, data, status: response.status });
 
   const isMissingResponse =
@@ -330,7 +340,6 @@ function calculateAnnualizedVolatility(dailyReturns) {
 
   const averageReturn = dailyReturns.reduce((sum, value) => sum + value, 0) / dailyReturns.length;
 
-  // Sample variance from daily returns, then annualize with sqrt(252).
   const variance =
     dailyReturns.reduce((sum, value) => sum + (value - averageReturn) ** 2, 0) /
     (dailyReturns.length - 1);
@@ -354,7 +363,6 @@ function calculatePortfolioMetrics(processedAssets) {
     };
   });
 
-  // Beginner-friendly portfolio volatility approximation (no covariance matrix).
   const weightedVariance = allocations.reduce(
     (sum, asset) => sum + (asset.weight * asset.annualizedVolatility) ** 2,
     0
@@ -363,7 +371,6 @@ function calculatePortfolioMetrics(processedAssets) {
 
   const portfolioDailyVolatility = portfolioAnnualVolatility / Math.sqrt(252);
 
-  // 95% one-day VaR using z-score = 1.65.
   const varDollar = 1.65 * portfolioDailyVolatility * portfolioValue;
   const varPercent = portfolioValue > 0 ? (varDollar / portfolioValue) * 100 : 0;
 
@@ -458,7 +465,7 @@ function updateAllocationChart(allocations) {
         {
           data: values,
           backgroundColor: colors,
-          borderColor: "#ffffff",
+          borderColor: "#0f1824",
           borderWidth: 2,
         },
       ],
@@ -470,9 +477,10 @@ function updateAllocationChart(allocations) {
         legend: {
           position: "bottom",
           labels: {
+            color: "#d4e2f1",
             font: {
-              family: "Manrope",
-              size: 12,
+              family: "IBM Plex Sans",
+              size: 11,
             },
             boxWidth: 12,
           },
@@ -522,7 +530,7 @@ function resetOutput() {
   concentrationRiskEl.textContent = "0.00% (Low)";
   riskScoreEl.textContent = "0 / 100 (Low)";
   riskInterpretationEl.textContent =
-    "Add assets and run the analysis to get a plain-English portfolio risk summary.";
+    "Add holdings and run analysis to generate a plain-English portfolio risk summary.";
 
   if (allocationChart) {
     allocationChart.destroy();
@@ -553,4 +561,52 @@ function formatNumber(value, decimals) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+// Save holdings so user entries persist after refresh/reopen.
+function saveHoldingsToStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
+}
+
+// Load saved holdings at startup and repopulate the in-memory list.
+function loadHoldingsFromStorage() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+
+    assets.length = 0;
+    parsed.forEach((item) => {
+      if (
+        item &&
+        typeof item.ticker === "string" &&
+        Number.isFinite(Number(item.shares)) &&
+        Number(item.shares) > 0 &&
+        typeof item.color === "string"
+      ) {
+        assets.push({
+          ticker: item.ticker.trim().toUpperCase(),
+          shares: Number(item.shares),
+          color: item.color,
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Failed to parse saved holdings:", error);
+  }
+}
+
+// Save selected analysis window so it restores after reload.
+function saveWindowToStorage() {
+  localStorage.setItem(WINDOW_STORAGE_KEY, windowSelect.value);
+}
+
+// Restore previously selected analysis window on page load.
+function loadWindowFromStorage() {
+  const savedWindow = localStorage.getItem(WINDOW_STORAGE_KEY);
+  if (savedWindow === "30D" || savedWindow === "90D" || savedWindow === "1Y") {
+    windowSelect.value = savedWindow;
+  }
 }
