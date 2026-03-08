@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskLens | Portfolio Risk Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>RiskLens</h1>
+      <p>Portfolio Risk Analyzer</p>
+    </div>
+    <span class="status-pill">Educational Dashboard</span>
+  </header>
+
+  <main class="dashboard-grid">
+    <section class="panel left-panel">
+      <h2>Portfolio Builder</h2>
+      <p class="section-note">Add assets and run risk analysis using historical daily market data.</p>
+
+      <form id="assetForm" class="asset-form">
+        <div class="input-group">
+          <label for="tickerInput">Ticker Symbol</label>
+          <input id="tickerInput" type="text" placeholder="AAPL" maxlength="10" required />
+        </div>
+        <div class="input-group">
+          <label for="sharesInput">Shares</label>
+          <input id="sharesInput" type="number" min="0.0001" step="any" placeholder="10" required />
+        </div>
+        <div class="input-group">
+          <label for="colorInput">Asset Color</label>
+          <input id="colorInput" type="color" value="#0a84ff" />
+        </div>
+        <div class="input-group">
+          <label for="windowSelect">Analysis Window</label>
+          <select id="windowSelect">
+            <option value="30D">30D</option>
+            <option value="90D" selected>90D</option>
+            <option value="1Y">1Y</option>
+          </select>
+        </div>
+        <div class="button-row">
+          <button type="submit" class="btn btn-secondary">Add Asset</button>
+          <button type="button" id="runAnalysisBtn" class="btn btn-primary">Run Risk Analysis</button>
+        </div>
+      </form>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Holdings</h3>
+          <span id="assetCount">0 assets</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Shares</th>
+                <th>Color</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="holdingsBody">
+              <tr id="emptyHoldingsRow">
+                <td colspan="4" class="empty-table-text">No assets added yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel right-panel">
+      <h2>Risk Overview</h2>
+      <div id="messageBox" class="message-box hidden"></div>
+
+      <div class="summary-grid">
+        <article class="summary-card">
+          <h3>Portfolio Value</h3>
+          <p id="portfolioValue">$0.00</p>
+        </article>
+        <article class="summary-card">
+          <h3>Annualized Volatility</h3>
+          <p id="portfolioVolatility">0.00%</p>
+        </article>
+        <article class="summary-card">
+          <h3>1-Day VaR (95%)</h3>
+          <p id="portfolioVar">$0.00 (0.00%)</p>
+        </article>
+        <article class="summary-card">
+          <h3>Concentration Risk</h3>
+          <p id="concentrationRisk">0.00% (Low)</p>
+        </article>
+        <article class="summary-card risk-score-card">
+          <h3>Risk Score</h3>
+          <p id="riskScore">0 / 100 (Low)</p>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-header">
+          <h3>Portfolio Allocation</h3>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="allocationChart" aria-label="Portfolio Allocation Doughnut Chart"></canvas>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Risk Interpretation</h3>
+        <p id="riskInterpretation">
+          Add assets and run the analysis to get a plain-English portfolio risk summary.
+        </p>
+      </article>
+
+      <article class="card">
+        <h3>Metric Guide</h3>
+        <div class="guide-list">
+          <div>
+            <h4>Volatility</h4>
+            <p>Volatility measures how much portfolio returns move up and down. Higher volatility means larger swings in value.</p>
+          </div>
+          <div>
+            <h4>Value at Risk (VaR)</h4>
+            <p>1-Day VaR (95%) estimates a one-day loss threshold that may be exceeded about 5% of the time under normal conditions.</p>
+          </div>
+          <div>
+            <h4>Concentration Risk</h4>
+            <p>Concentration risk shows how much the portfolio depends on its largest holding. Higher concentration means less diversification.</p>
+          </div>
+          <div>
+            <h4>Risk Score</h4>
+            <p>The risk score combines volatility, VaR, and concentration into a single 0-100 indicator for quick risk assessment.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
